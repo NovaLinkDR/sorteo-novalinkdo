@@ -1,0 +1,27 @@
+services:
+  sorteo-novalinkdo:
+    build: .
+    container_name: sorteo-novalinkdo
+    restart: unless-stopped
+    networks:
+      coolify:
+        aliases:
+          - sorteo
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DATABASE_PATH=/data/sorteo.db
+      - UPLOAD_DIR=/data/uploads
+    volumes:
+      - sorteo_data:/data
+    expose:
+      - "3000"
+
+networks:
+  coolify:
+    external: true
+
+volumes:
+  sorteo_data:

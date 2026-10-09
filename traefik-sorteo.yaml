@@ -1,0 +1,14 @@
+http:
+  routers:
+    sorteo-http:
+      entryPoints:
+        - http
+      service: sorteo
+      rule: Host(`sorteo.novalinkdo.com`)
+      middlewares:
+        - gzip
+  services:
+    sorteo:
+      loadBalancer:
+        servers:
+          - url: "http://sorteo:3000"
