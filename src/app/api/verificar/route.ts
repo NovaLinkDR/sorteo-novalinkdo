@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
     );
   }
   const normalized = numero.padStart(5, "0").slice(-5);
-  const t = verifyTicket(normalized);
+  const t = await verifyTicket(normalized);
 
   if (!t) {
     return NextResponse.json({

@@ -11,9 +11,9 @@ export default async function RifaDetailPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const rifa = getRifaBySlug(slug);
+  const rifa = await getRifaBySlug(slug);
   if (!rifa) notFound();
-  const stats = getRifaStats(rifa.id);
+  const stats = await getRifaStats(rifa.id);
   const pct = Math.round(stats.progress * 100);
 
   return (

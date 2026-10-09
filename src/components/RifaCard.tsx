@@ -1,6 +1,5 @@
 import Link from "next/link";
-import { Rifa } from "@/lib/db";
-import { RifaStats } from "@/lib/data";
+import { Rifa, RifaStats } from "@/lib/data";
 import { formatCents, formatDate } from "@/lib/format";
 
 export default function RifaCard({

@@ -32,12 +32,15 @@ const pasos = [
   },
 ];
 
-export default function Home() {
-  const rifas = listRifas(true).map((r) => ({
-    rifa: r,
-    stats: getRifaStats(r.id),
-  }));
-  const winners = listWinners().slice(0, 6);
+export default async function Home() {
+  const rifaList = await listRifas(true);
+  const rifas = await Promise.all(
+    rifaList.map(async (r) => ({
+      rifa: r,
+      stats: await getRifaStats(r.id),
+    }))
+  );
+  const winners = (await listWinners()).slice(0, 6);
 
   return (
     <>

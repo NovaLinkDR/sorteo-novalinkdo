@@ -21,10 +21,10 @@ export function formatDate(iso: string | null): string {
   });
 }
 
-export function formatDateTime(iso: string | null): string {
+export function formatDateTime(iso: string | Date | null): string {
   if (!iso) return "—";
-  const d = new Date(iso);
-  if (isNaN(d.getTime())) return iso;
+  const d = iso instanceof Date ? iso : new Date(iso);
+  if (isNaN(d.getTime())) return String(iso);
   return d.toLocaleString("es-DO", {
     day: "2-digit",
     month: "short",

@@ -8,9 +8,11 @@ export async function GET(
   { params }: { params: Promise<{ slug: string }> }
 ) {
   const { slug } = await params;
-  const rifa = getRifaBySlug(slug);
+  const rifa = await getRifaBySlug(slug);
   if (!rifa) {
     return NextResponse.json({ error: "Rifa no encontrada" }, { status: 404 });
   }
-  return NextResponse.json({ rifa: { ...rifa, stats: getRifaStats(rifa.id) } });
+  return NextResponse.json({
+    rifa: { ...rifa, stats: await getRifaStats(rifa.id) },
+  });
 }

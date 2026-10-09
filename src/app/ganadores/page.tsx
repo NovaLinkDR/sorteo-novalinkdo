@@ -2,8 +2,8 @@ import { listWinners } from "@/lib/data";
 
 export const dynamic = "force-dynamic";
 
-export default function GanadoresPage() {
-  const winners = listWinners();
+export default async function GanadoresPage() {
+  const winners = await listWinners();
 
   return (
     <div className="container-x py-16">

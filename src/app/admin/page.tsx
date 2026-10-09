@@ -319,9 +319,9 @@ function Ordenes({
               <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-faint">
                 <span>{formatDateTime(o.created_at)}</span>
                 {o.email && <span>· {o.email}</span>}
-                {o.receipt_path && (
+                {o.receipt_filename && (
                   <a
-                    href={`/api/admin/receipt/${o.receipt_path}`}
+                    href={`/api/admin/receipt/${o.id}`}
                     target="_blank"
                     rel="noreferrer"
                     className="text-accent hover:text-accent-bright"

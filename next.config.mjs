@@ -1,10 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'standalone',
-  serverExternalPackages: ['better-sqlite3'],
-  experimental: {
-    serverActions: { bodySizeLimit: '10mb' },
-  },
+  serverExternalPackages: ['pg'],
 };
 
 export default nextConfig;

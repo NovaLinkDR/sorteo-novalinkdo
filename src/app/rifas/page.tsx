@@ -3,11 +3,14 @@ import { listRifas, getRifaStats } from "@/lib/data";
 
 export const dynamic = "force-dynamic";
 
-export default function RifasPage() {
-  const rifas = listRifas(true).map((r) => ({
-    rifa: r,
-    stats: getRifaStats(r.id),
-  }));
+export default async function RifasPage() {
+  const rifaList = await listRifas(true);
+  const rifas = await Promise.all(
+    rifaList.map(async (r) => ({
+      rifa: r,
+      stats: await getRifaStats(r.id),
+    }))
+  );
 
   return (
     <section className="container-x py-16">

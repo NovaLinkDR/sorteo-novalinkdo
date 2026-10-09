@@ -14,13 +14,16 @@ export async function PATCH(
   if (!["pendiente", "confirmado", "rechazado"].includes(status)) {
     return NextResponse.json({ error: "Estado inválido" }, { status: 400 });
   }
-  const order = getOrder(id);
-  if (!order) return NextResponse.json({ error: "Orden no existe" }, { status: 404 });
+  const order = await getOrder(id);
+  if (!order) {
+    return NextResponse.json({ error: "Orden no existe" }, { status: 404 });
+  }
 
-  setOrderStatus(id, status, body.note);
-  const updated = getOrder(id)!;
+  await setOrderStatus(id, status, body.note);
+  const updated = (await getOrder(id))!;
+  const { receipt_data: _rd, ...safe } = updated;
   return NextResponse.json({
     ok: true,
-    order: { ...updated, tickets: getOrderTickets(id).map((t) => t.number) },
+    order: { ...safe, tickets: (await getOrderTickets(id)).map((t) => t.number) },
   });
 }

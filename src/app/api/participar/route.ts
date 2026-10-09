@@ -1,16 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import fs from "fs";
-import path from "path";
 import { getRifaById, createOrder } from "@/lib/data";
 
 export const runtime = "nodejs";
 
-function uploadDir(): string {
-  return (
-    process.env.UPLOAD_DIR ||
-    path.join(process.cwd(), "data", "uploads")
-  );
-}
+const MAX_SIZE = 8 * 1024 * 1024; // 8 MB
 
 export async function POST(req: NextRequest) {
   let form: FormData;
@@ -37,7 +30,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const rifa = getRifaById(rifaId);
+  const rifa = await getRifaById(rifaId);
   if (!rifa) {
     return NextResponse.json({ error: "Rifa no encontrada" }, { status: 404 });
   }
@@ -60,37 +53,42 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  let receiptPath: string | undefined;
+  let receiptData: string | undefined;
+  let receiptMime: string | undefined;
+  let receiptFilename: string | undefined;
   if (file && file.size > 0) {
+    if (file.size > MAX_SIZE) {
+      return NextResponse.json(
+        { error: "El comprobante es demasiado grande (máximo 8 MB)" },
+        { status: 400 }
+      );
+    }
     try {
-      const dir = uploadDir();
-      fs.mkdirSync(dir, { recursive: true });
-      const ext = path.extname(file.name).toLowerCase() || ".bin";
-      const allowed = [".jpg", ".jpeg", ".png", ".webp", ".pdf", ".heic"];
-      const safeExt = allowed.includes(ext) ? ext : ".bin";
-      const filename = `${Date.now()}-${Math.random()
-        .toString(36)
-        .slice(2, 8)}${safeExt}`;
       const buf = Buffer.from(await file.arrayBuffer());
-      fs.writeFileSync(path.join(dir, filename), buf);
-      receiptPath = filename;
+      receiptData = buf.toString("base64");
+      receiptMime = file.type || "application/octet-stream";
+      receiptFilename = file.name;
     } catch {
-      receiptPath = undefined;
+      receiptData = undefined;
     }
   }
 
   try {
-    const { order, tickets } = createOrder({
+    const { order, tickets } = await createOrder({
       rifaId,
       name,
       phone,
       email: email || undefined,
       ticketQuantity: quantity,
-      receiptPath,
+      receiptData,
+      receiptMime,
+      receiptFilename,
     });
+    // No devolver el comprobante (base64) al cliente
+    const { receipt_data: _receipt, ...safeOrder } = order;
     return NextResponse.json({
       ok: true,
-      order,
+      order: safeOrder,
       tickets: tickets.map((t) => t.number),
     });
   } catch (e: any) {
