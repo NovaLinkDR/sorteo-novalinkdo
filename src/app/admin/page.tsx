@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { formatCents, formatDateTime } from "@/lib/format";
 
-type Tab = "resumen" | "ordenes" | "rifas" | "ganadores";
+type Tab = "resumen" | "ordenes" | "rifas" | "ganadores" | "vendedores";
 
 const STATUS_COLOR: Record<string, string> = {
   pendiente: "text-amber-400 border-amber-400/30 bg-amber-400/10",
@@ -97,6 +97,9 @@ export default function AdminPage() {
           <NavBtn active={tab === "ganadores"} onClick={() => setTab("ganadores")} icon="★">
             Ganadores
           </NavBtn>
+          <NavBtn active={tab === "vendedores"} onClick={() => setTab("vendedores")} icon="◎">
+            Vendedores
+          </NavBtn>
         </nav>
 
         <div className="border-t border-line-soft p-3">
@@ -111,7 +114,7 @@ export default function AdminPage() {
 
       {/* Mobile nav */}
       <div className="fixed inset-x-0 bottom-0 z-40 flex border-t border-line-soft bg-surface md:hidden">
-        {(["resumen", "ordenes", "rifas", "ganadores"] as Tab[]).map((t) => (
+        {(["resumen", "ordenes", "rifas", "ganadores", "vendedores"] as Tab[]).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -150,8 +153,10 @@ export default function AdminPage() {
             />
           ) : tab === "rifas" ? (
             <Rifas rifas={stats.rifas || []} onUpdate={loadAll} />
-          ) : (
+          ) : tab === "ganadores" ? (
             <Ganadores winners={winners} rifas={stats.rifas || []} onUpdate={loadAll} />
+          ) : (
+            <Vendedores />
           )}
         </div>
       </main>
@@ -182,6 +187,189 @@ function NavBtn({
       <span className="mono text-xs">{icon}</span>
       {children}
     </button>
+  );
+}
+
+function Vendedores() {
+  const [vendors, setVendors] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showAdd, setShowAdd] = useState(false);
+  const [copied, setCopied] = useState("");
+  const [form, setForm] = useState({ name: "", code: "", password: "" });
+  const [error, setError] = useState("");
+
+  async function load() {
+    const d = await fetch("/api/admin/vendedores").then((r) => r.json());
+    setVendors(d.vendors || []);
+    setLoading(false);
+  }
+
+  useEffect(() => {
+    load();
+  }, []);
+
+  async function add() {
+    setError("");
+    const res = await fetch("/api/admin/vendedores", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(form),
+    });
+    const d = await res.json();
+    if (!res.ok) {
+      setError(d.error || "Error");
+      return;
+    }
+    setForm({ name: "", code: "", password: "" });
+    setShowAdd(false);
+    load();
+  }
+
+  async function toggle(id: number, active: boolean) {
+    await fetch("/api/admin/vendedores", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, active }),
+    });
+    load();
+  }
+
+  async function remove(id: number) {
+    if (!confirm("¿Eliminar este vendedor?")) return;
+    await fetch(`/api/admin/vendedores?id=${id}`, { method: "DELETE" });
+    load();
+  }
+
+  async function copy(code: string) {
+    const url = `https://sorteo.novalinkdo.com/rifa/rifa-10-playstation-5?ref=${code}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(code);
+      setTimeout(() => setCopied(""), 1500);
+    } catch {}
+  }
+
+  const pesoT = (n: number) => `RD$ ${(n || 0).toLocaleString("es-DO")}`;
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="max-w-xl text-sm text-mute">
+          Vendedores con código de referido. Comisión: <span className="text-white">RD$10,000</span> por
+          cada 1,000 boletos confirmados. Primera meta: 2,000 boletos = RD$20,000.
+        </p>
+        <button onClick={() => setShowAdd((v) => !v)} className="btn-primary px-4 py-2 text-sm">
+          {showAdd ? "Cancelar" : "+ Agregar vendedor"}
+        </button>
+      </div>
+
+      {showAdd && (
+        <div className="card space-y-3 p-5">
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div>
+              <label className="label">Nombre</label>
+              <input
+                className="input"
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                placeholder="Nombre del vendedor"
+              />
+            </div>
+            <div>
+              <label className="label">Código (opcional)</label>
+              <input
+                className="input mono uppercase"
+                value={form.code}
+                onChange={(e) => setForm({ ...form, code: e.target.value })}
+                placeholder="Auto si vacío"
+              />
+            </div>
+            <div>
+              <label className="label">Contraseña de acceso</label>
+              <input
+                className="input"
+                value={form.password}
+                onChange={(e) => setForm({ ...form, password: e.target.value })}
+                placeholder="Contraseña"
+              />
+            </div>
+          </div>
+          {error && <p className="text-sm text-red-400">{error}</p>}
+          <button onClick={add} className="btn-primary px-4 py-2 text-sm">
+            Guardar vendedor
+          </button>
+        </div>
+      )}
+
+      {loading ? (
+        <p className="text-mute">Cargando…</p>
+      ) : vendors.length === 0 ? (
+        <div className="card p-10 text-center text-mute">
+          No hay vendedores. Agrega el primero para que empiecen a vender.
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {vendors.map((v: any) => {
+            const s = v.stats || {};
+            const g1 = s.goal1 || { tickets: 2000, pesos: 20000, reached: false };
+            const g2 = s.goal2 || { tickets: 3000, pesos: 30000, reached: false };
+            const pct = Math.min(100, Math.round(((s.confirmedTickets || 0) / g2.tickets) * 100));
+            return (
+              <div key={v.id} className="card p-5">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p className="font-semibold text-white">
+                      {v.name}{" "}
+                      <span className={`ml-1 text-xs ${v.active ? "text-accent" : "text-faint"}`}>
+                        {v.active ? "● activo" : "○ inactivo"}
+                      </span>
+                    </p>
+                    <p className="mono text-sm text-accent">{v.code}</p>
+                    <p className="text-xs text-mute">
+                      {s.confirmedTickets} boletos confirmados · {s.pendingTickets} pendientes ·{" "}
+                      {s.totalOrders} órdenes
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs text-faint">Comisión acumulada</p>
+                    <p className="mono text-lg font-bold text-accent">{pesoT(s.commissionPesos)}</p>
+                  </div>
+                </div>
+
+                <div className="mt-3">
+                  <div className="flex justify-between text-xs text-faint">
+                    <span>
+                      Meta 1: {g1.tickets} ({pesoT(g1.pesos)}) {g1.reached ? "✓" : ""}
+                    </span>
+                    <span>
+                      Meta 2: {g2.tickets} ({pesoT(g2.pesos)}) {g2.reached ? "✓" : ""}
+                    </span>
+                  </div>
+                  <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-surface2">
+                    <div className="h-full rounded-full bg-accent" style={{ width: `${pct}%` }} />
+                  </div>
+                </div>
+
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <button onClick={() => copy(v.code)} className="btn-ghost px-3 py-1.5 text-xs">
+                    {copied === v.code ? "✓ Copiado" : "🔗 Copiar link"}
+                  </button>
+                  <button onClick={() => toggle(v.id, !v.active)} className="btn-ghost px-3 py-1.5 text-xs">
+                    {v.active ? "Desactivar" : "Activar"}
+                  </button>
+                  <button
+                    onClick={() => remove(v.id)}
+                    className="btn-ghost px-3 py-1.5 text-xs text-red-400 hover:border-red-400/50"
+                  >
+                    Eliminar
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
   );
 }
 

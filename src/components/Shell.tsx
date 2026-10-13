@@ -6,7 +6,8 @@ import Footer from "@/components/Footer";
 
 export default function Shell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const isAdmin = pathname.startsWith("/admin");
+  const isAdmin =
+    pathname.startsWith("/admin") || pathname.startsWith("/vendedor");
 
   if (isAdmin) {
     return <>{children}</>;

@@ -7,10 +7,14 @@ export const dynamic = "force-dynamic";
 
 export default async function RifaDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ ref?: string }>;
 }) {
   const { slug } = await params;
+  const sp = await searchParams;
+  const ref = sp.ref || undefined;
   const rifa = await getRifaBySlug(slug);
   if (!rifa) notFound();
   const stats = await getRifaStats(rifa.id);
@@ -94,6 +98,7 @@ export default async function RifaDetailPage({
         {/* Derecha: formulario */}
         <div>
           <BuyForm
+            referralCode={ref}
             rifa={{
               id: rifa.id,
               slug: rifa.slug,

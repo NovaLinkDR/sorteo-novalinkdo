@@ -46,6 +46,7 @@ async function init() {
       receipt_data TEXT,
       receipt_mime TEXT,
       receipt_filename TEXT,
+      referral_code TEXT,
       status TEXT DEFAULT 'pendiente',
       admin_note TEXT,
       created_at TIMESTAMPTZ DEFAULT now()
@@ -69,9 +70,28 @@ async function init() {
       announced_at TIMESTAMPTZ DEFAULT now()
     );
 
+    CREATE TABLE IF NOT EXISTS vendedores (
+      id SERIAL PRIMARY KEY,
+      name TEXT NOT NULL,
+      code TEXT UNIQUE NOT NULL,
+      password_hash TEXT NOT NULL,
+      active BOOLEAN DEFAULT true,
+      created_at TIMESTAMPTZ DEFAULT now()
+    );
+
     CREATE INDEX IF NOT EXISTS idx_tickets_number ON tickets(rifa_id, number);
     CREATE INDEX IF NOT EXISTS idx_orders_rifa ON orders(rifa_id);
+    CREATE INDEX IF NOT EXISTS idx_orders_ref ON orders(referral_code);
   `);
+
+  // Migraciones ligeras (columnas agregadas con posterioridad)
+  const orderCols = await pool.query(
+    "SELECT column_name FROM information_schema.columns WHERE table_name = 'orders'"
+  );
+  const orderColNames = orderCols.rows.map((r) => r.column_name);
+  if (!orderColNames.includes("referral_code")) {
+    await pool.query("ALTER TABLE orders ADD COLUMN referral_code TEXT");
+  }
 
   await seed();
 }
@@ -92,21 +112,33 @@ async function seed() {
         "rifa-10-playstation-5",
         "Rifa 10 PlayStation 5",
         "Tu consola de nueva generación, a un boleto de distancia",
-        "Sorteo de diez (10) consolas PlayStation 5 Slim. Cinco sorteos en vivo, dos ganadores por sorteo (número al derecho y al revés).",
+        "Sorteo de diez (10) consolas PlayStation 5 Slim. Cinco sorteos en vivo, dos ganadores por sorteo (número de 4 dígitos al derecho y al revés).",
         "PlayStation 5 Slim",
         4999 * 100,
         "/rifas/ps5.jpg",
-        1000,
-        10,
-        10000,
-        100000,
+        10000, // RD$100 por boleto
+        1, // mínimo 1 boleto
+        1000, // máximo por orden
+        10000, // espacio de 4 dígitos (0000-9999)
         null,
         null,
         "En vivo — Instagram",
         "Se anunciará al 60% vendido",
-        "PICK 4 Lotería de Florida + comodín (5 dígitos), al derecho y al revés. 5 sorteos × 2 ganadores = 10 premios. El sorteo se celebra al alcanzar el 60% de boletos vendidos.",
+        "PICK 3 Lotería de Florida + comodín (4 dígitos), al derecho y al revés. 5 sorteos × 2 ganadores = 10 premios. El sorteo se celebra al alcanzar el 60% de boletos vendidos.",
         "activa",
       ]
+    );
+  } else {
+    // Actualizar valores de la mecánica existente (precio, total, min/max, mecánica)
+    await pool.query(
+      `UPDATE rifas SET
+        ticket_price_cents = 10000,
+        min_tickets = 1,
+        max_tickets_per_order = 1000,
+        total_tickets = 10000,
+        draw_mechanic = 'PICK 3 Lotería de Florida + comodín (4 dígitos), al derecho y al revés. 5 sorteos × 2 ganadores = 10 premios. El sorteo se celebra al alcanzar el 60% de boletos vendidos.',
+        description = 'Sorteo de diez (10) consolas PlayStation 5 Slim. Cinco sorteos en vivo, dos ganadores por sorteo (número de 4 dígitos al derecho y al revés).'
+       WHERE slug = 'rifa-10-playstation-5'`
     );
   }
 }

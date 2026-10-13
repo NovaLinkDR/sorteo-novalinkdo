@@ -41,8 +41,8 @@ export default function VerificarPage() {
           <div className="flex gap-2">
             <input
               className="input mono h-12 flex-1 text-center text-lg tracking-widest"
-              placeholder="00000"
-              maxLength={5}
+              placeholder="0000"
+              maxLength={4}
               value={numero}
               onChange={(e) => setNumero(e.target.value.replace(/\D/g, ""))}
             />

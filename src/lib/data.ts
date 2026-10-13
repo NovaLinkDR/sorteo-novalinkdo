@@ -34,6 +34,7 @@ export interface Order {
   receipt_data: string | null;
   receipt_mime: string | null;
   receipt_filename: string | null;
+  referral_code: string | null;
   status: string;
   admin_note: string | null;
   created_at: string | Date;
@@ -45,6 +46,24 @@ export interface Ticket {
   order_id: number;
   number: string;
   created_at: string | Date;
+}
+
+export interface Vendor {
+  id: number;
+  name: string;
+  code: string;
+  password_hash: string;
+  active: boolean;
+  created_at: string | Date;
+}
+
+// Comisiones
+export const COMMISSION_PESOS_PER_1000 = 10000; // RD$10,000 por cada 1,000 boletos
+export const GOAL_1_TICKETS = 2000; // primera meta
+export const GOAL_2_TICKETS = 3000; // segunda meta
+
+export function calcCommission(soldTickets: number): number {
+  return Math.floor(soldTickets / 1000) * COMMISSION_PESOS_PER_1000;
 }
 
 export function genOrderCode(): string {
@@ -176,6 +195,7 @@ async function genTicketNumbers(
   count: number,
   total: number
 ): Promise<string[]> {
+  const digits = String(Math.max(total - 1, 0)).length; // 10000 -> 4
   const max = Math.min(total, 100000);
   const { rows } = await pool.query(
     "SELECT number FROM tickets WHERE rifa_id = $1",
@@ -188,7 +208,7 @@ async function genTicketNumbers(
     guard++;
     const num = Math.floor(Math.random() * max)
       .toString()
-      .padStart(5, "0");
+      .padStart(digits, "0");
     if (!existing.has(num)) {
       existing.add(num);
       result.push(num);
@@ -206,6 +226,7 @@ export interface OrderInput {
   receiptData?: string;
   receiptMime?: string;
   receiptFilename?: string;
+  referralCode?: string;
 }
 
 export async function createOrder(input: OrderInput): Promise<{
@@ -232,8 +253,8 @@ export async function createOrder(input: OrderInput): Promise<{
     const orderRes = await client.query(
       `INSERT INTO orders
         (code, rifa_id, name, phone, email, ticket_quantity, total_cents,
-         receipt_data, receipt_mime, receipt_filename, status)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'pendiente')
+         receipt_data, receipt_mime, receipt_filename, referral_code, status)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'pendiente')
        RETURNING *`,
       [
         code,
@@ -246,6 +267,7 @@ export async function createOrder(input: OrderInput): Promise<{
         input.receiptData || null,
         input.receiptMime || null,
         input.receiptFilename || null,
+        input.referralCode || null,
       ]
     );
     const order = orderRes.rows[0] as Order;
@@ -271,11 +293,10 @@ export async function setOrderStatus(
   note?: string
 ) {
   await ensureDb();
-  await pool.query("UPDATE orders SET status = $1, admin_note = $2 WHERE id = $3", [
-    status,
-    note || null,
-    id,
-  ]);
+  await pool.query(
+    "UPDATE orders SET status = $1, admin_note = $2 WHERE id = $3",
+    [status, note || null, id]
+  );
 }
 
 export async function listWinners(rifaId?: number) {
@@ -315,4 +336,119 @@ export async function addWinner(
 export async function removeWinner(id: number) {
   await ensureDb();
   await pool.query("DELETE FROM winners WHERE id = $1", [id]);
+}
+
+// ===== Vendedores =====
+
+export async function listVendors(): Promise<Vendor[]> {
+  await ensureDb();
+  const { rows } = await pool.query(
+    "SELECT * FROM vendedores ORDER BY id ASC"
+  );
+  return rows as Vendor[];
+}
+
+export async function getVendorByCode(code: string): Promise<Vendor | undefined> {
+  await ensureDb();
+  const { rows } = await pool.query(
+    "SELECT * FROM vendedores WHERE code = $1",
+    [code]
+  );
+  return rows[0] as Vendor | undefined;
+}
+
+export async function getVendorById(id: number): Promise<Vendor | undefined> {
+  await ensureDb();
+  const { rows } = await pool.query(
+    "SELECT * FROM vendedores WHERE id = $1",
+    [id]
+  );
+  return rows[0] as Vendor | undefined;
+}
+
+export async function createVendor(
+  name: string,
+  code: string,
+  passwordHash: string
+): Promise<Vendor> {
+  await ensureDb();
+  const { rows } = await pool.query(
+    "INSERT INTO vendedores (name, code, password_hash) VALUES ($1,$2,$3) RETURNING *",
+    [name, code, passwordHash]
+  );
+  return rows[0] as Vendor;
+}
+
+export async function updateVendor(
+  id: number,
+  fields: { name?: string; code?: string; active?: boolean; password_hash?: string }
+) {
+  await ensureDb();
+  const sets: string[] = [];
+  const vals: any[] = [];
+  let i = 1;
+  for (const [k, v] of Object.entries(fields)) {
+    if (v !== undefined) {
+      sets.push(`${k} = $${i++}`);
+      vals.push(v);
+    }
+  }
+  if (!sets.length) return;
+  vals.push(id);
+  await pool.query(`UPDATE vendedores SET ${sets.join(", ")} WHERE id = $${i}`, vals);
+}
+
+export async function deleteVendor(id: number) {
+  await ensureDb();
+  await pool.query("DELETE FROM vendedores WHERE id = $1", [id]);
+}
+
+export interface VendorStats {
+  confirmedTickets: number;
+  pendingTickets: number;
+  totalOrders: number;
+  commissionPesos: number;
+  goal1: { tickets: number; pesos: number; reached: boolean };
+  goal2: { tickets: number; pesos: number; reached: boolean };
+}
+
+export async function getVendorStats(code: string): Promise<VendorStats> {
+  await ensureDb();
+  const { rows } = await pool.query(
+    `SELECT
+       COALESCE(SUM(ticket_quantity) FILTER (WHERE status='confirmado'),0)::int AS confirmed_tickets,
+       COALESCE(SUM(ticket_quantity) FILTER (WHERE status='pendiente'),0)::int AS pending_tickets,
+       COUNT(*)::int AS total_orders
+     FROM orders WHERE referral_code = $1`,
+    [code]
+  );
+  const s = rows[0];
+  const sold = s.confirmed_tickets;
+  const commission = calcCommission(sold);
+  return {
+    confirmedTickets: sold,
+    pendingTickets: s.pending_tickets,
+    totalOrders: s.total_orders,
+    commissionPesos: commission,
+    goal1: {
+      tickets: GOAL_1_TICKETS,
+      pesos: calcCommission(GOAL_1_TICKETS),
+      reached: sold >= GOAL_1_TICKETS,
+    },
+    goal2: {
+      tickets: GOAL_2_TICKETS,
+      pesos: calcCommission(GOAL_2_TICKETS),
+      reached: sold >= GOAL_2_TICKETS,
+    },
+  };
+}
+
+export async function getVendorRecentOrders(code: string, limit = 20) {
+  await ensureDb();
+  const { rows } = await pool.query(
+    `SELECT id, code AS order_code, name, ticket_quantity, total_cents, status, created_at
+     FROM orders WHERE referral_code = $1 ORDER BY id DESC LIMIT $2`,
+    [code, limit]
+  );
+  return rows;
 }

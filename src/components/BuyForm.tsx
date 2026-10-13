@@ -74,7 +74,13 @@ const BANKS = [
   },
 ];
 
-export default function BuyForm({ rifa }: { rifa: RifaProps }) {
+export default function BuyForm({
+  rifa,
+  referralCode,
+}: {
+  rifa: RifaProps;
+  referralCode?: string;
+}) {
   const [qty, setQty] = useState(rifa.min_tickets);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -131,6 +137,7 @@ export default function BuyForm({ rifa }: { rifa: RifaProps }) {
       fd.append("email", email);
       fd.append("quantity", String(qty));
       fd.append("receipt", file);
+      if (referralCode) fd.append("ref", referralCode);
 
       const res = await fetch("/api/participar", { method: "POST", body: fd });
       const data = await res.json();

@@ -22,6 +22,7 @@ export async function POST(req: NextRequest) {
   const email = String(form.get("email") || "").trim();
   const quantity = Number(form.get("quantity"));
   const file = (form.get("receipt") as File | null) || null;
+  const referralCode = String(form.get("ref") || "").trim() || undefined;
 
   if (!rifaId || !name || !phone || !quantity) {
     return NextResponse.json(
@@ -83,6 +84,7 @@ export async function POST(req: NextRequest) {
       receiptData,
       receiptMime,
       receiptFilename,
+      referralCode,
     });
     // No devolver el comprobante (base64) al cliente
     const { receipt_data: _receipt, ...safeOrder } = order;

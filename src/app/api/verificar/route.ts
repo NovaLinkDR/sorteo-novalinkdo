@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
       { status: 400 }
     );
   }
-  const normalized = numero.padStart(5, "0").slice(-5);
+  const normalized = numero.padStart(4, "0").slice(-4);
   const t = await verifyTicket(normalized);
 
   if (!t) {
