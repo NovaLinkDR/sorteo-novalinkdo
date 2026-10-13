@@ -81,7 +81,6 @@ async function init() {
 
     CREATE INDEX IF NOT EXISTS idx_tickets_number ON tickets(rifa_id, number);
     CREATE INDEX IF NOT EXISTS idx_orders_rifa ON orders(rifa_id);
-    CREATE INDEX IF NOT EXISTS idx_orders_ref ON orders(referral_code);
   `);
 
   // Migraciones ligeras (columnas agregadas con posterioridad)
@@ -92,6 +91,10 @@ async function init() {
   if (!orderColNames.includes("referral_code")) {
     await pool.query("ALTER TABLE orders ADD COLUMN referral_code TEXT");
   }
+
+  // Índices que dependen de columnas migradas (van DESPUÉS del ALTER, si no
+  // falla con "column does not exist" en bases ya existentes)
+  await pool.query("CREATE INDEX IF NOT EXISTS idx_orders_ref ON orders(referral_code)");
 
   await seed();
 }
