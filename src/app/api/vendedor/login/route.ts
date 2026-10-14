@@ -24,10 +24,10 @@ export async function POST(req: NextRequest) {
   const res = NextResponse.json({ ok: true, vendor: { name: vendor.name, code: vendor.code } });
   res.cookies.set(VENDOR_COOKIE, signVendorSession(vendor.code), {
     httpOnly: true,
-    sameSite: "lax",
+    sameSite: "none",
+    secure: true,
     path: "/",
     maxAge: 60 * 60 * 24 * 7,
-    secure: process.env.NODE_ENV === "production",
   });
   return res;
 }

@@ -10,10 +10,10 @@ export async function POST(req: NextRequest) {
   const res = NextResponse.json({ ok: true });
   res.cookies.set(AUTH_COOKIE, signSession(), {
     httpOnly: true,
-    sameSite: "lax",
+    sameSite: "none",
+    secure: true,
     path: "/",
     maxAge: 60 * 60 * 24 * 7,
-    secure: process.env.NODE_ENV === "production",
   });
   return res;
 }

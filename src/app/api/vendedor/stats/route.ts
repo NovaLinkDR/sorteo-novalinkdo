@@ -15,10 +15,11 @@ export async function GET(req: NextRequest) {
   }
   const stats = await getVendorStats(code);
   const recent = await getVendorRecentOrders(code, 20);
+  const siteUrl = (process.env.PUBLIC_SITE_URL || "http://localhost:5173").replace(/\/$/, "");
   return NextResponse.json({
     vendor: { name: vendor.name, code: vendor.code },
     stats,
     recentOrders: recent,
-    referralUrl: `https://sorteo.novalinkdo.com/rifa/rifa-10-playstation-5?ref=${code}`,
+    referralUrl: `${siteUrl}/rifa/rifa-10-playstation-5?ref=${code}`,
   });
 }
