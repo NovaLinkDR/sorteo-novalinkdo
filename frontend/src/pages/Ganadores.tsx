@@ -17,7 +17,7 @@ export default function GanadoresPage() {
     let isMounted = true;
     (async () => {
       try {
-        const data = await api<{ winners: Winner[] }>("/api/admin/winners");
+        const data = await api<{ winners: Winner[] }>("/api/winners");
         if (isMounted) {
           setWinners(data.winners || []);
         }

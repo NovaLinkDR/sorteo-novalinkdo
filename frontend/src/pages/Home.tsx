@@ -79,7 +79,7 @@ export default function HomePage() {
     })();
 
     // Ganadores recientes si están disponibles
-    api<{ winners: any[] }>("/api/admin/winners")
+    api<{ winners: any[] }>("/api/winners")
       .then((data) => {
         if (isMounted && data?.winners) {
           setWinners(data.winners.slice(0, 6));
