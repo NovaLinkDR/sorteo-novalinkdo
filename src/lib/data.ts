@@ -190,14 +190,21 @@ export async function verifyTicket(
   return (rows[0] as any) || null;
 }
 
+/**
+ * Genera números únicos dentro del rango de la rifa (para 10,000 boletos:
+ * "0000".."9999"). Nunca repite un número ya usado en esa rifa, ni dentro del
+ * mismo pedido. Acepta un runner (`pool` o un `client` dentro de una
+ * transacción) para que la lectura de "ocupados" y el INSERT sean atómicos.
+ */
 async function genTicketNumbers(
   rifaId: number,
   count: number,
-  total: number
+  total: number,
+  runner: { query: (text: string, params?: any[]) => Promise<{ rows: any[] }> } = pool
 ): Promise<string[]> {
   const digits = String(Math.max(total - 1, 0)).length; // 10000 -> 4
   const max = Math.min(total, 100000);
-  const { rows } = await pool.query(
+  const { rows } = await runner.query(
     "SELECT number FROM tickets WHERE rifa_id = $1",
     [rifaId]
   );
@@ -238,18 +245,25 @@ export async function createOrder(input: OrderInput): Promise<{
   if (!rifa) throw new Error("Rifa no encontrada");
   const total = input.ticketQuantity * rifa.ticket_price_cents;
   const code = genOrderCode();
-  const numbers = await genTicketNumbers(
-    rifa.id,
-    input.ticketQuantity,
-    rifa.total_tickets
-  );
-  if (numbers.length < input.ticketQuantity) {
-    throw new Error("No hay suficientes números disponibles para esta rifa");
-  }
 
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
+    // Serializa la asignación de números de esta rifa: sin esto, dos compras
+    // simultáneas podrían leer el mismo conjunto de "ocupados" y chocar contra
+    // el UNIQUE (rifa_id, number), tumbando la orden. El lock se libera solo al
+    // terminar la transacción.
+    await client.query("SELECT pg_advisory_xact_lock($1)", [900000 + rifa.id]);
+    const numbers = await genTicketNumbers(
+      rifa.id,
+      input.ticketQuantity,
+      rifa.total_tickets,
+      client
+    );
+    if (numbers.length < input.ticketQuantity) {
+      throw new Error("No hay suficientes números disponibles para esta rifa");
+    }
+
     const orderRes = await client.query(
       `INSERT INTO orders
         (code, rifa_id, name, phone, email, ticket_quantity, total_cents,
