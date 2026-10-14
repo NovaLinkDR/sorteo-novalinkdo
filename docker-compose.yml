@@ -4,24 +4,25 @@ services:
     container_name: sorteo-novalinkdo
     restart: unless-stopped
     networks:
-      coolify:
-        aliases:
-          - sorteo
-    env_file:
-      - .env
+      - coolify
+    # Las variables se definen en Coolify (recurso -> Environment Variables)
+    # y se inyectan aqui. NO van quemadas en el repo.
+    #   DATABASE_URL      -> la URL INTERNA del Postgres de Coolify
+    #   SESSION_SECRET    -> secreto de las cookies de sesion
+    #   ADMIN_PASSWORD    -> clave del panel /admin
+    #   FRONTEND_ORIGIN   -> origen del front (Vercel), para CORS
+    #   PUBLIC_SITE_URL   -> dominio publico (link de vendedores)
     environment:
       - NODE_ENV=production
       - PORT=3000
-      - DATABASE_PATH=/data/sorteo.db
-      - UPLOAD_DIR=/data/uploads
-    volumes:
-      - sorteo_data:/data
+      - DATABASE_URL=${DATABASE_URL}
+      - SESSION_SECRET=${SESSION_SECRET}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+      - FRONTEND_ORIGIN=${FRONTEND_ORIGIN}
+      - PUBLIC_SITE_URL=${PUBLIC_SITE_URL}
     expose:
       - "3000"
 
 networks:
   coolify:
     external: true
-
-volumes:
-  sorteo_data:
