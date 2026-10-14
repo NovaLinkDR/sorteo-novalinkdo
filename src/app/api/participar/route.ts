@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getRifaById, createOrder } from "@/lib/data";
+import { sendOrderReceived } from "@/lib/mail";
 
 export const runtime = "nodejs";
 
@@ -88,6 +89,34 @@ export async function POST(req: NextRequest) {
     });
     // No devolver el comprobante (base64) al cliente
     const { receipt_data: _receipt, ...safeOrder } = order;
+
+    // Acuse de recibo: le entregamos sus números de una vez, aunque los boletos
+    // sigan SIN confirmar. Va sin await: si Zoho falla o tarda, la compra igual
+    // queda registrada.
+    if (order.email) {
+      sendOrderReceived(
+        {
+          code: order.code,
+          name: order.name,
+          email: order.email,
+          ticket_quantity: order.ticket_quantity,
+          total_cents: order.total_cents,
+        },
+        {
+          name: rifa.name,
+          slug: rifa.slug,
+          prize_name: rifa.prize_name,
+          sorteo_date: rifa.sorteo_date,
+          sorteo_time: rifa.sorteo_time,
+          sorteo_place: rifa.sorteo_place,
+          sorteo_note: rifa.sorteo_note,
+        },
+        tickets.map((t) => t.number)
+      ).catch((e) =>
+        console.error(`[mail] fallo el acuse de recibo de ${order.code}:`, e)
+      );
+    }
+
     return NextResponse.json({
       ok: true,
       order: safeOrder,

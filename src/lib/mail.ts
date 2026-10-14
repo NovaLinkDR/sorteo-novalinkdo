@@ -3,6 +3,11 @@ import nodemailer from "nodemailer";
 /**
  * Envio de correos por SMTP (Zoho Mail para sorteo@novalinkdo.com).
  *
+ * Dos momentos:
+ *   - "received":  al registrar la compra -> le damos SUS NUMEROS de una vez,
+ *                  aunque los boletos sigan sin confirmar en el sistema.
+ *   - "confirmed": al validar el pago en el panel -> los boletos quedan activos.
+ *
  * Variables de entorno:
  *   SMTP_HOST  (default smtp.zoho.com)
  *   SMTP_PORT  (default 465 -> SSL)
@@ -12,7 +17,7 @@ import nodemailer from "nodemailer";
  *   PUBLIC_SITE_URL  dominio publico, para armar el link de verificacion
  *
  * Si no hay credenciales, el modulo queda inactivo y avisa por consola:
- * la confirmacion de la orden NUNCA se cae por un problema de correo.
+ * registrar o confirmar una orden NUNCA se cae por un problema de correo.
  */
 
 const SITE = (process.env.PUBLIC_SITE_URL || "").replace(/\/$/, "");
@@ -86,15 +91,47 @@ export interface MailRifa {
   sorteo_note?: string | null;
 }
 
+type MailKind = "received" | "confirmed";
+
+/** Textos que cambian segun el momento (compra recibida vs. pago validado). */
+function copy(kind: MailKind, name: string) {
+  if (kind === "received") {
+    return {
+      badge: "Compra recibida",
+      heading: `¡Gracias, ${name}! 🎉`,
+      intro:
+        "Ya apartamos tus boletos a tu nombre. Estos son tus números:",
+      subject: (rifa: string, code: string) =>
+        `🎟️ Tus boletos de ${rifa} (${code})`,
+    };
+  }
+  return {
+    badge: "Boletos confirmados",
+    heading: `¡Listo, ${name}! 🎉`,
+    intro: "Confirmamos tu pago y tus boletos ya están activos. ¡Mucha suerte!",
+    subject: (rifa: string, code: string) =>
+      `✅ Boletos activos — ${rifa} (${code})`,
+  };
+}
+
 function renderHtml(
   order: MailOrder,
   rifa: MailRifa,
-  tickets: string[]
+  tickets: string[],
+  kind: MailKind
 ): string {
   const verifyUrl = SITE ? `${SITE}/verificar` : "";
+  const c = copy(kind, order.name);
   const rowStyle =
     "padding:7px 0;border-bottom:1px solid #2a2f3a;font-size:14px;color:#c8cedb";
   const labelStyle = "color:#8b93a7;padding:7px 0;font-size:13px";
+
+  // Nota final bajo los numeros, distinta en cada momento.
+  const nota =
+    kind === "received"
+      ? `Tus boletos se activan automáticamente en cuanto validemos tu
+         transferencia — te avisamos por correo.`
+      : `Guarda este correo: tus números de boleto están aquí.`;
 
   return `<!doctype html>
 <html lang="es"><head><meta charset="utf-8">
@@ -105,26 +142,26 @@ function renderHtml(
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#151a24;border:1px solid #232a38;border-radius:14px;overflow:hidden">
     <tr><td style="padding:22px 26px;background:#111621;border-bottom:1px solid #232a38">
       <div style="font-size:15px;font-weight:600;color:#ffffff">sorteo.novalink</div>
-      <div style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#4ade80;margin-top:3px">Boletos confirmados</div>
+      <div style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#4ade80;margin-top:3px">${esc(c.badge)}</div>
     </td></tr>
     <tr><td style="padding:26px">
-      <p style="margin:0 0 6px;font-size:18px;font-weight:600;color:#ffffff">¡Listo, ${esc(order.name)}! 🎉</p>
+      <p style="margin:0 0 6px;font-size:18px;font-weight:600;color:#ffffff">${esc(c.heading)}</p>
       <p style="margin:0 0 20px;font-size:14px;line-height:1.6;color:#a9b1c2">
-        Confirmamos tu pago y tus boletos ya están activos. ¡Mucha suerte!
+        ${esc(c.intro)}
       </p>
 
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#0f141d;border:1px solid #232a38;border-radius:10px;padding:4px 18px;margin-bottom:20px">
+      <p style="margin:0 0 10px;font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:#8b93a7">Tus números</p>
+      <div style="font-family:ui-monospace,monospace;font-size:16px;color:#ffffff;line-height:1.9;background:#0f141d;border:1px solid #232a38;border-radius:10px;padding:16px 18px;word-break:break-word">
+        ${tickets.map((t) => esc(t)).join(" &nbsp; ")}
+      </div>
+
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#0f141d;border:1px solid #232a38;border-radius:10px;padding:4px 18px;margin-top:20px">
         <tr><td style="${labelStyle}">Orden</td><td align="right" style="${rowStyle};font-family:ui-monospace,monospace"><b>${esc(order.code)}</b></td></tr>
         <tr><td style="${labelStyle}">Rifa</td><td align="right" style="${rowStyle}">${esc(rifa.name)}</td></tr>
         <tr><td style="${labelStyle}">Premio</td><td align="right" style="${rowStyle}">${esc(rifa.prize_name || "—")}</td></tr>
         <tr><td style="${labelStyle}">Cantidad</td><td align="right" style="${rowStyle}">${esc(order.ticket_quantity)} boleto(s)</td></tr>
         <tr><td style="${labelStyle}">Total</td><td align="right" style="${rowStyle}"><b style="color:#4ade80">${money(order.total_cents)}</b></td></tr>
       </table>
-
-      <p style="margin:0 0 10px;font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:#8b93a7">Tus números</p>
-      <div style="font-family:ui-monospace,monospace;font-size:16px;color:#ffffff;line-height:1.9;background:#0f141d;border:1px solid #232a38;border-radius:10px;padding:16px 18px;word-break:break-word">
-        ${tickets.map((t) => esc(t)).join(" &nbsp; ")}
-      </div>
 
       ${
         rifa.sorteo_date || rifa.sorteo_place || rifa.sorteo_note
@@ -153,7 +190,7 @@ function renderHtml(
       }
 
       <p style="margin:24px 0 0;font-size:12px;line-height:1.7;color:#6f7789">
-        Guarda este correo: tus números de boleto están aquí.<br>
+        ${nota}<br>
         ¿Dudas? Responde a este mensaje o escríbenos por
         <a href="${WHATSAPP_URL}" style="color:#4ade80;text-decoration:none">WhatsApp (${WHATSAPP_DISPLAY})</a>.
       </p>
@@ -172,12 +209,15 @@ function renderHtml(
 function renderText(
   order: MailOrder,
   rifa: MailRifa,
-  tickets: string[]
+  tickets: string[],
+  kind: MailKind
 ): string {
+  const c = copy(kind, order.name);
   return [
-    "sorteo.novalink — BOLETOS CONFIRMADOS",
+    `sorteo.novalink — ${c.badge.toUpperCase()}`,
     "",
-    `¡Listo, ${order.name}! Confirmamos tu pago y tus boletos ya están activos.`,
+    c.heading,
+    c.intro,
     "",
     `Orden      : ${order.code}`,
     `Rifa       : ${rifa.name}`,
@@ -187,6 +227,9 @@ function renderText(
     "",
     `Tus números: ${tickets.join(" ")}`,
     "",
+    kind === "received"
+      ? "Tus boletos se activan automáticamente en cuanto validemos tu transferencia."
+      : "",
     rifa.sorteo_date
       ? `Sorteo: ${rifa.sorteo_date}${rifa.sorteo_time ? " " + rifa.sorteo_time : ""}${rifa.sorteo_place ? " — " + rifa.sorteo_place : ""}`
       : "",
@@ -200,27 +243,50 @@ function renderText(
     .join("\n");
 }
 
-/**
- * Envía la confirmación de una orden ya confirmada.
- * Lanza si falla; quien llama decide si lo registra o lo ignora.
- */
-export async function sendOrderConfirmation(
+async function send(
+  kind: MailKind,
   order: MailOrder,
   rifa: MailRifa,
   tickets: string[]
 ): Promise<void> {
   const { from } = cfg();
   if (!mailConfigured()) {
-    console.warn("[mail] SMTP sin configurar: no se envió la confirmación de", order.code);
+    console.warn(`[mail] SMTP sin configurar: no se envió el correo (${kind}) de`, order.code);
     return;
   }
   const info = await transport().sendMail({
     from,
     to: order.email,
     replyTo: from,
-    subject: `✅ Boletos confirmados — ${rifa.name} (${order.code})`,
-    text: renderText(order, rifa, tickets),
-    html: renderHtml(order, rifa, tickets),
+    subject: copy(kind, order.name).subject(rifa.name, order.code),
+    text: renderText(order, rifa, tickets, kind),
+    html: renderHtml(order, rifa, tickets, kind),
   });
-  console.log(`[mail] confirmación ${order.code} enviada a ${order.email} (id=${info.messageId})`);
+  console.log(
+    `[mail] ${kind} ${order.code} enviado a ${order.email} (id=${info.messageId})`
+  );
+}
+
+/**
+ * Acuse de recibo: se manda al registrar la compra. Le entrega sus números de
+ * inmediato aunque los boletos todavía no estén confirmados en el sistema.
+ */
+export function sendOrderReceived(
+  order: MailOrder,
+  rifa: MailRifa,
+  tickets: string[]
+): Promise<void> {
+  return send("received", order, rifa, tickets);
+}
+
+/**
+ * Confirmación: se manda cuando el pago ya fue validado en el panel.
+ * Lanza si falla; quien llama decide si lo registra o lo ignora.
+ */
+export function sendOrderConfirmation(
+  order: MailOrder,
+  rifa: MailRifa,
+  tickets: string[]
+): Promise<void> {
+  return send("confirmed", order, rifa, tickets);
 }

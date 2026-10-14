@@ -185,9 +185,13 @@ export default function BuyForm({
             ✓
           </span>
           <div>
-            <h3 className="text-lg font-bold text-white">¡Compra registrada!</h3>
+            <h3 className="text-lg font-bold text-white">
+              ¡Listo! Ya apartamos tus boletos 🎉
+            </h3>
             <p className="text-sm text-mute">
-              Tu orden quedó pendiente de confirmación de pago.
+              {email.trim()
+                ? "Te enviamos tus números por correo. Estos son:"
+                : "Estos son tus números:"}
             </p>
           </div>
         </div>
@@ -216,8 +220,8 @@ export default function BuyForm({
         </div>
 
         <p className="mt-6 rounded-lg border border-accent/20 bg-accent/5 p-3 text-sm text-accent-bright">
-          Una vez confirmemos tu transferencia, tus boletos quedarán activos.
-          Recibirás la confirmación por correo electrónico.
+          Se activan automáticamente en cuanto validemos tu transferencia. Te
+          avisamos por correo.
         </p>
 
         <p className="mt-3 text-center text-sm text-mute">
