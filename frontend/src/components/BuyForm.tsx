@@ -100,6 +100,11 @@ export default function BuyForm({
   const [selectedBank, setSelectedBank] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
+  // Referido: se autocompleta desde el link (?ref=CODIGO). Si vino del link se
+  // muestra fijo (no editable) para que no se dañe; si no, se puede escribir.
+  const [refCode, setRefCode] = useState(() => referralCode || getReferralCode());
+  const [refFromLink] = useState(() => Boolean(referralCode || getReferralCode()));
+
   const total = useMemo(() => qty * rifa.ticket_price_cents, [qty, rifa]);
 
   function clamp(v: number) {
@@ -158,7 +163,7 @@ export default function BuyForm({
       fd.append("quantity", String(qty));
       fd.append("receipt", file);
 
-      const effectiveRef = referralCode || getReferralCode();
+      const effectiveRef = refCode.trim();
       if (effectiveRef) {
         fd.append("ref", effectiveRef);
       }
@@ -315,11 +320,12 @@ export default function BuyForm({
                   : "border-line bg-surface2 hover:border-accent/40"
               }`}
             >
-              <span
-                className="mono flex h-9 w-9 items-center justify-center rounded-full text-xs font-bold text-white"
-                style={{ backgroundColor: b.color }}
-              >
-                {b.short}
+              <span className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-lg bg-white p-1">
+                <img
+                  src={`/bancos/${b.id}.jpg`}
+                  alt={b.name}
+                  className="h-full w-full object-contain"
+                />
               </span>
               <span className="text-[11px] leading-tight text-white">
                 {b.name}
@@ -332,11 +338,12 @@ export default function BuyForm({
           <div className="mt-3 rounded-lg border border-accent/30 bg-surface2 p-4">
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2">
-                <span
-                  className="mono flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-bold text-white"
-                  style={{ backgroundColor: bank.color }}
-                >
-                  {bank.short}
+                <span className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-md bg-white p-0.5">
+                  <img
+                    src={`/bancos/${bank.id}.jpg`}
+                    alt={bank.name}
+                    className="h-full w-full object-contain"
+                  />
                 </span>
                 <span className="text-sm font-semibold text-white">
                   {bank.name}
@@ -404,6 +411,31 @@ export default function BuyForm({
             onChange={(e) => setEmail(e.target.value)}
             placeholder="tu@correo.com"
           />
+        </div>
+        <div>
+          <label className="label">Código de referido</label>
+          {refFromLink ? (
+            <>
+              <div className="flex items-center justify-between rounded-lg border border-accent/30 bg-accent/5 px-4 py-2.5">
+                <span className="mono text-sm font-semibold text-accent">
+                  {refCode}
+                </span>
+                <span className="text-[11px] uppercase tracking-wide text-faint">
+                  de tu link
+                </span>
+              </div>
+              <p className="mt-1 text-xs text-faint">
+                Tu compra contará para quien te invitó.
+              </p>
+            </>
+          ) : (
+            <input
+              className="input mono uppercase"
+              value={refCode}
+              onChange={(e) => setRefCode(e.target.value.toUpperCase())}
+              placeholder="Opcional — código de quien te invitó"
+            />
+          )}
         </div>
         <div>
           <label className="label">Comprobante de transferencia *</label>

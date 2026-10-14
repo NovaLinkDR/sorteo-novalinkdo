@@ -1,11 +1,16 @@
 const REF_KEY = "sorteo_referral_code";
 
+/**
+ * Guarda el codigo de referido. Se usa localStorage (no sessionStorage) para
+ * que no se pierda si el comprador navega en otra pestaña o vuelve mas tarde.
+ * El ultimo link de referido que abra es el que cuenta.
+ */
 export function saveReferralCode(code: string | null) {
   if (!code || typeof window === "undefined") return;
   const trimmed = code.trim();
   if (trimmed) {
     try {
-      sessionStorage.setItem(REF_KEY, trimmed);
+      localStorage.setItem(REF_KEY, trimmed);
     } catch {}
   }
 }
@@ -13,10 +18,17 @@ export function saveReferralCode(code: string | null) {
 export function getReferralCode(): string {
   if (typeof window === "undefined") return "";
   try {
-    return sessionStorage.getItem(REF_KEY) || "";
+    return localStorage.getItem(REF_KEY) || "";
   } catch {
     return "";
   }
+}
+
+export function clearReferralCode() {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.removeItem(REF_KEY);
+  } catch {}
 }
 
 export function appendRefToUrl(url: string): string {

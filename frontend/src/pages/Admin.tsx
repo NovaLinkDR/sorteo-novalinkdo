@@ -18,6 +18,7 @@ export default function AdminPage() {
   const [stats, setStats] = useState<any>(null);
   const [orders, setOrders] = useState<any[]>([]);
   const [winners, setWinners] = useState<any[]>([]);
+  const [vendors, setVendors] = useState<any[]>([]);
   const [orderFilter, setOrderFilter] = useState("");
 
   const [receiptModal, setReceiptModal] = useState<{
@@ -30,14 +31,16 @@ export default function AdminPage() {
 
   const loadAll = useCallback(async () => {
     try {
-      const [s, o, w] = await Promise.all([
+      const [s, o, w, v] = await Promise.all([
         api("/api/admin/stats"),
         api("/api/admin/orders"),
         api("/api/admin/winners"),
+        api("/api/admin/vendedores").catch(() => null),
       ]);
       setStats(s);
       setOrders(o?.orders || []);
       setWinners(w?.winners || []);
+      setVendors(v?.vendors || []);
     } catch (err: any) {
       if (err.status === 401) {
         navigate("/admin/login", { replace: true });
@@ -106,6 +109,11 @@ export default function AdminPage() {
   const filteredOrders = orderFilter
     ? orders.filter((o) => o.status === orderFilter)
     : orders;
+
+  // Codigo de referido -> nombre del vendedor, para mostrarlo en cada orden
+  const vendorByCode = new Map<string, string>(
+    vendors.map((v: any) => [String(v.code), String(v.name)])
+  );
 
   if (authed === null) {
     return (
@@ -197,6 +205,7 @@ export default function AdminPage() {
               onStatus={setOrderStatus}
               onViewReceipt={openReceipt}
               receiptLoading={receiptLoading}
+              vendorNames={vendorByCode}
             />
           ) : tab === "rifas" ? (
             <Rifas rifas={stats.rifas || []} onUpdate={loadAll} />
@@ -418,7 +427,11 @@ function Vendedores() {
             const s = v.stats || {};
             const g1 = s.goal1 || { tickets: 2000, pesos: 20000, reached: false };
             const g2 = s.goal2 || { tickets: 3000, pesos: 30000, reached: false };
-            const pct = Math.min(100, Math.round(((s.confirmedTickets || 0) / g2.tickets) * 100));
+            const confirmed = s.confirmedTickets || 0;
+            const pctExact = g2.tickets ? (confirmed / g2.tickets) * 100 : 0;
+            const pct = confirmed > 0 ? Math.max(2, Math.min(100, pctExact)) : 0;
+            const pctLabel =
+              pctExact > 0 && pctExact < 1 ? pctExact.toFixed(2) : pctExact.toFixed(1);
             return (
               <div key={v.id} className="card p-5">
                 <div className="flex flex-wrap items-start justify-between gap-3">
@@ -442,16 +455,28 @@ function Vendedores() {
                 </div>
 
                 <div className="mt-3">
-                  <div className="flex justify-between text-xs text-faint">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-mute">
+                      <span className="mono text-white">
+                        {confirmed.toLocaleString("es-DO")}
+                      </span>{" "}
+                      de {g2.tickets.toLocaleString("es-DO")} boletos
+                    </span>
+                    <span className="mono text-accent">{pctLabel}%</span>
+                  </div>
+                  <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-surface2">
+                    <div
+                      className="h-full rounded-full bg-accent transition-all"
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+                  <div className="mt-1 flex justify-between text-[11px] text-faint">
                     <span>
                       Meta 1: {g1.tickets} ({pesoT(g1.pesos)}) {g1.reached ? "✓" : ""}
                     </span>
                     <span>
                       Meta 2: {g2.tickets} ({pesoT(g2.pesos)}) {g2.reached ? "✓" : ""}
                     </span>
-                  </div>
-                  <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-surface2">
-                    <div className="h-full rounded-full bg-accent" style={{ width: `${pct}%` }} />
                   </div>
                 </div>
 
@@ -564,6 +589,7 @@ function Ordenes({
   onStatus,
   onViewReceipt,
   receiptLoading,
+  vendorNames,
 }: {
   orders: any[];
   filter: string;
@@ -571,6 +597,7 @@ function Ordenes({
   onStatus: (id: number, status: string) => void;
   onViewReceipt: (id: number) => void;
   receiptLoading: boolean;
+  vendorNames: Map<string, string>;
 }) {
   const [expanded, setExpanded] = useState<number | null>(null);
 
@@ -605,6 +632,18 @@ function Ordenes({
                     <p className="text-xs text-mute">
                       {o.name} · {o.phone} · {o.ticket_quantity} boletos
                     </p>
+                    {o.referral_code && (
+                      <p className="mt-0.5 text-xs">
+                        <span className="text-faint">Referido por </span>
+                        <span className="mono text-accent">{o.referral_code}</span>
+                        {vendorNames.get(String(o.referral_code)) && (
+                          <span className="text-mute">
+                            {" · "}
+                            {vendorNames.get(String(o.referral_code))}
+                          </span>
+                        )}
+                      </p>
+                    )}
                   </div>
                 </button>
                 <div className="flex items-center gap-2">

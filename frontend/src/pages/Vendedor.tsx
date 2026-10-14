@@ -143,7 +143,13 @@ export default function VendedorPage() {
   const s = data?.stats || {};
   const g1 = s.goal1 || { tickets: 2000, pesos: 20000, reached: false };
   const g2 = s.goal2 || { tickets: 3000, pesos: 30000, reached: false };
-  const pct = Math.min(100, Math.round(((s.confirmedTickets || 0) / g2.tickets) * 100));
+  const confirmed = s.confirmedTickets || 0;
+  // Porcentaje real (sin redondear) y ancho de barra con un minimo visible:
+  // antes, 5/3000 se redondeaba a 0 y la barra parecia no moverse nunca.
+  const pctExact = g2.tickets ? (confirmed / g2.tickets) * 100 : 0;
+  const pctBar = confirmed > 0 ? Math.max(2, Math.min(100, pctExact)) : 0;
+  const pctLabel =
+    pctExact > 0 && pctExact < 1 ? pctExact.toFixed(2) : pctExact.toFixed(1);
 
   return (
     <div className="min-h-screen bg-bg">
@@ -222,18 +228,28 @@ export default function VendedorPage() {
         {/* Metas */}
         <div className="card mt-6 p-5">
           <p className="mb-3 text-sm font-semibold text-white">Progreso hacia tus metas</p>
-          <div className="mb-2 flex justify-between text-xs text-faint">
-            <span>
-              Meta 1: {g1.tickets} boletos → {pesoT(g1.pesos)}{" "}
-              {g1.reached ? "✓ lograda" : ""}
+          <div className="mb-2 flex items-center justify-between text-xs">
+            <span className="text-mute">
+              <span className="mono text-white">
+                {confirmed.toLocaleString("es-DO")}
+              </span>{" "}
+              de {g2.tickets.toLocaleString("es-DO")} boletos
             </span>
-            <span>
-              Meta 2: {g2.tickets} boletos → {pesoT(g2.pesos)}{" "}
-              {g2.reached ? "✓ lograda" : ""}
-            </span>
+            <span className="mono text-accent">{pctLabel}%</span>
           </div>
           <div className="h-2.5 w-full overflow-hidden rounded-full bg-surface2">
-            <div className="h-full rounded-full bg-accent" style={{ width: `${pct}%` }} />
+            <div
+              className="h-full rounded-full bg-accent transition-all"
+              style={{ width: `${pctBar}%` }}
+            />
+          </div>
+          <div className="mt-2 flex justify-between text-xs text-faint">
+            <span>
+              Meta 1: {g1.tickets} → {pesoT(g1.pesos)} {g1.reached ? "✓ lograda" : ""}
+            </span>
+            <span>
+              Meta 2: {g2.tickets} → {pesoT(g2.pesos)} {g2.reached ? "✓ lograda" : ""}
+            </span>
           </div>
           <p className="mt-2 text-xs text-faint">
             RD$10,000 por cada 1,000 boletos confirmados.
