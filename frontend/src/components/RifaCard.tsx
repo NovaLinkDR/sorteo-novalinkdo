@@ -74,15 +74,15 @@ export default function RifaCard({
       </div>
 
       {/* Cuerpo */}
-      <div className="flex flex-1 flex-col gap-4 p-5">
+      <div className="flex flex-1 flex-col gap-3 p-4 sm:gap-4 sm:p-5">
         <div>
-          <h3 className="text-lg font-bold leading-tight text-white">
+          <h3 className="text-base font-bold leading-tight text-white sm:text-lg">
             {rifa.prize_name || rifa.name}
           </h3>
-          <p className="mt-1 text-sm text-mute">{rifa.tagline}</p>
+          <p className="mt-1 line-clamp-2 text-xs text-mute sm:text-sm">{rifa.tagline}</p>
         </div>
 
-        <div className="flex items-center justify-between text-sm">
+        <div className="flex items-center justify-between text-xs sm:text-sm">
           <span className="text-mute">Boleto</span>
           <span className="mono font-semibold text-white">
             {formatCents(rifa.ticket_price_cents)}

@@ -13,7 +13,7 @@ const pasos = [
   {
     n: "02",
     t: "Selecciona tus boletos",
-    d: "Elige cuántos boletos quieres (mínimo 10, máximo 10,000).",
+    d: "Elige cuántos boletos quieres (mínimo 1, máximo 1,000).",
   },
   {
     n: "03",

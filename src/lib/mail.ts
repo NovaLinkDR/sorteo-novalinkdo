@@ -157,7 +157,7 @@ function renderHtml(
 
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#0f141d;border:1px solid #232a38;border-radius:10px;padding:4px 18px;margin-top:20px">
         <tr><td style="${labelStyle}">Orden</td><td align="right" style="${rowStyle};font-family:ui-monospace,monospace"><b>${esc(order.code)}</b></td></tr>
-        <tr><td style="${labelStyle}">Rifa</td><td align="right" style="${rowStyle}">${esc(rifa.name)}</td></tr>
+        <tr><td style="${labelStyle}">Sorteo</td><td align="right" style="${rowStyle}">${esc(rifa.name)}</td></tr>
         <tr><td style="${labelStyle}">Premio</td><td align="right" style="${rowStyle}">${esc(rifa.prize_name || "—")}</td></tr>
         <tr><td style="${labelStyle}">Cantidad</td><td align="right" style="${rowStyle}">${esc(order.ticket_quantity)} boleto(s)</td></tr>
         <tr><td style="${labelStyle}">Total</td><td align="right" style="${rowStyle}"><b style="color:#4ade80">${money(order.total_cents)}</b></td></tr>
@@ -220,7 +220,7 @@ function renderText(
     c.intro,
     "",
     `Orden      : ${order.code}`,
-    `Rifa       : ${rifa.name}`,
+    `Sorteo     : ${rifa.name}`,
     `Premio     : ${rifa.prize_name || "-"}`,
     `Cantidad   : ${order.ticket_quantity} boleto(s)`,
     `Total      : ${money(order.total_cents)}`,

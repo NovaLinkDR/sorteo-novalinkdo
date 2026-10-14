@@ -57,7 +57,7 @@ export default function RifasPage() {
           No hay rifas activas por el momento.
         </div>
       ) : (
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-6">
           {rifas.map((r) => (
             <RifaCard key={r.id} rifa={r} stats={r.stats} />
           ))}

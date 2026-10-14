@@ -163,19 +163,16 @@ export default function RifaDetallePage() {
             <p className="mt-2 text-right text-xs text-accent">{pct}% vendido</p>
           </div>
 
-          {/* Detalles */}
-          <div className="mt-8 grid gap-3 sm:grid-cols-2">
+          {/* Detalles: los 5 datos en grid (2 columnas en teléfono, 3 en pantallas mayores) */}
+          <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3">
             <Detail label="Precio del boleto" value={formatCents(rifa.ticket_price_cents)} />
             <Detail label="Compra mínima" value={`${rifa.min_tickets} boletos`} />
             <Detail label="Compra máxima" value={`${rifa.max_tickets_per_order.toLocaleString("es-DO")} boletos`} />
             <Detail label="Sorteo" value={rifa.sorteo_date ? formatDate(rifa.sorteo_date) : rifa.sorteo_note || "Por anunciar"} />
-          </div>
-
-          {rifa.sorteo_place && (
-            <div className="mt-3">
+            {rifa.sorteo_place && (
               <Detail label="Lugar del sorteo" value={rifa.sorteo_place} />
-            </div>
-          )}
+            )}
+          </div>
 
           {/* Mecánica */}
           {rifa.draw_mechanic && (
