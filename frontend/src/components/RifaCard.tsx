@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { formatCents, formatDate } from "@/lib/format";
 import { appendRefToUrl } from "@/lib/referral";
+import { assetUrl } from "@/lib/api";
 
 export interface Rifa {
   id: number;
@@ -49,7 +50,7 @@ export default function RifaCard({
       <div className="relative aspect-square w-full overflow-hidden border-b border-line-soft bg-surface2/60">
         {rifa.prize_image ? (
           <img
-            src={rifa.prize_image}
+            src={assetUrl(rifa.prize_image)}
             alt={rifa.prize_name || rifa.name}
             className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
           />

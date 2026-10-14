@@ -1,5 +1,16 @@
 export const API_URL = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
 
+/**
+ * Los assets de premios viven en el `public/` del backend y la BD los guarda
+ * como rutas relativas ("/rifas/ps5.jpg"). La SPA vive en otro dominio, asi
+ * que hay que anteponer la URL de la API. Las URLs absolutas pasan intactas.
+ */
+export function assetUrl(path?: string | null): string {
+  if (!path) return "";
+  if (/^(https?:)?\/\//i.test(path) || path.startsWith("data:")) return path;
+  return `${API_URL}${path.startsWith("/") ? "" : "/"}${path}`;
+}
+
 export interface ApiError extends Error {
   status?: number;
   data?: any;
