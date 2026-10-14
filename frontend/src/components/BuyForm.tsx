@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { formatCents } from "@/lib/format";
 import { api } from "@/lib/api";
 import { getReferralCode, appendRefToUrl } from "@/lib/referral";
+import { waLink, WHATSAPP_DISPLAY } from "@/lib/contact";
 
 interface RifaProps {
   id: number;
@@ -216,7 +217,19 @@ export default function BuyForm({
 
         <p className="mt-6 rounded-lg border border-accent/20 bg-accent/5 p-3 text-sm text-accent-bright">
           Una vez confirmemos tu transferencia, tus boletos quedarán activos.
-          Recibirás la confirmación por WhatsApp.
+          Recibirás la confirmación por correo electrónico.
+        </p>
+
+        <p className="mt-3 text-center text-sm text-mute">
+          ¿Alguna duda con tu compra?{" "}
+          <a
+            href={waLink("Hola, tengo una duda sobre mi compra de boletos.")}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-accent hover:underline"
+          >
+            Escríbenos por WhatsApp
+          </a>
         </p>
 
         <Link
@@ -431,6 +444,18 @@ export default function BuyForm({
       <p className="mt-4 text-center text-xs text-faint">
         Al participar confirmas que eres mayor de 18 años y aceptas las bases
         de la rifa.
+      </p>
+
+      <p className="mt-3 text-center text-xs text-mute">
+        ¿Dudas antes de transferir?{" "}
+        <a
+          href={waLink("Hola, tengo una duda antes de hacer la transferencia.")}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-accent hover:underline"
+        >
+          Escríbenos por WhatsApp ({WHATSAPP_DISPLAY})
+        </a>
       </p>
     </form>
   );

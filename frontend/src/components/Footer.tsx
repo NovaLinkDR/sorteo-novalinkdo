@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { appendRefToUrl } from "@/lib/referral";
+import { waLink, WHATSAPP_DISPLAY, CONTACT_EMAIL } from "@/lib/contact";
 
 export default function Footer() {
   return (
@@ -44,8 +45,24 @@ export default function Footer() {
               Contacto
             </p>
             <ul className="mt-3 space-y-2 text-sm">
-              <li><span className="text-mute">WhatsApp</span></li>
-              <li><span className="text-mute">soporte@novalinkdo.com</span></li>
+              <li>
+                <a
+                  href={waLink("Hola, tengo una pregunta sobre la rifa.")}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-mute hover:text-white"
+                >
+                  WhatsApp {WHATSAPP_DISPLAY}
+                </a>
+              </li>
+              <li>
+                <a
+                  href={`mailto:${CONTACT_EMAIL}`}
+                  className="text-mute hover:text-white"
+                >
+                  {CONTACT_EMAIL}
+                </a>
+              </li>
             </ul>
           </div>
         </div>

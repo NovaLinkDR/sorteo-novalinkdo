@@ -17,6 +17,12 @@ import nodemailer from "nodemailer";
 
 const SITE = (process.env.PUBLIC_SITE_URL || "").replace(/\/$/, "");
 
+/** Contacto visible en el correo (mismo numero que el sitio). */
+const WHATSAPP_DISPLAY = "+1 809 267 7792";
+const WHATSAPP_URL =
+  "https://wa.me/18092677792?text=" +
+  encodeURIComponent("Hola, tengo una duda sobre mi compra.");
+
 function cfg() {
   const host = process.env.SMTP_HOST || "smtp.zoho.com";
   const port = Number(process.env.SMTP_PORT || 465);
@@ -148,7 +154,8 @@ function renderHtml(
 
       <p style="margin:24px 0 0;font-size:12px;line-height:1.7;color:#6f7789">
         Guarda este correo: tus números de boleto están aquí.<br>
-        ¿Dudas? Responde a este mensaje o escríbenos por WhatsApp.
+        ¿Dudas? Responde a este mensaje o escríbenos por
+        <a href="${WHATSAPP_URL}" style="color:#4ade80;text-decoration:none">WhatsApp (${WHATSAPP_DISPLAY})</a>.
       </p>
     </td></tr>
     <tr><td style="padding:16px 26px;background:#111621;border-top:1px solid #232a38">
@@ -184,6 +191,8 @@ function renderText(
       ? `Sorteo: ${rifa.sorteo_date}${rifa.sorteo_time ? " " + rifa.sorteo_time : ""}${rifa.sorteo_place ? " — " + rifa.sorteo_place : ""}`
       : "",
     SITE ? `Verifica tus boletos: ${SITE}/verificar` : "",
+    "",
+    `¿Dudas? WhatsApp: https://wa.me/18092677792  (${WHATSAPP_DISPLAY})`,
     "",
     "Juego responsable +18 · Solo adultos",
   ]

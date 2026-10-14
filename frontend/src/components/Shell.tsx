@@ -1,6 +1,7 @@
 import { useLocation } from "react-router-dom";
 import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
+import WhatsAppButton from "@/components/WhatsAppButton";
 
 export default function Shell({ children }: { children: React.ReactNode }) {
   const location = useLocation();
@@ -16,6 +17,7 @@ export default function Shell({ children }: { children: React.ReactNode }) {
       <Nav />
       <main className="flex-1">{children}</main>
       <Footer />
+      <WhatsAppButton />
     </div>
   );
 }
